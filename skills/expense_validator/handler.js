@@ -2,10 +2,9 @@
 require("dotenv").config({ path: require("path").resolve(__dirname, "../../.env") });
 
 const { fingerprint } = require("../../lib/hashing");
-const { getColumn } = require("../../lib/googleSheets");
+const fingerprints = require("../../lib/fingerprints");
 
 const CURRENCY_ALIASES = { "$": "USD", "€": "EUR", "£": "GBP", "¥": "JPY" };
-const FINGERPRINT_COLUMN = "I";
 
 function normalize(expense) {
   expense.vendor = (expense.vendor || "").trim();
@@ -41,14 +40,13 @@ async function main() {
 
   expense.fingerprint = fingerprint(expense.vendor, expense.date, expense.total);
 
-  const spreadsheetId = process.env.GOOGLE_SHEETS_ID;
-  const existing = await getColumn(spreadsheetId, FINGERPRINT_COLUMN);
-
-  if (existing.includes(expense.fingerprint)) {
+  if (fingerprints.has(expense.fingerprint)) {
     throw new Error(
       `Duplicate receipt detected (vendor: ${expense.vendor}, date: ${expense.date}, total: ${expense.total})`
     );
   }
+
+  fingerprints.save(expense.fingerprint);
 
   process.stdout.write(JSON.stringify(expense));
 }

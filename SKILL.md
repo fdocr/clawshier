@@ -2,15 +2,16 @@
 name: clawshier
 description: >
   Scan receipt or invoice photos sent via chat, extract expense data using
-  OpenAI Vision, validate and deduplicate, then log to a Google Spreadsheet.
-  Responds with a short summary of what was added.
+  OpenAI Vision, validate and deduplicate, then log to a Google Spreadsheet
+  via the browser. Responds with a short summary of what was added.
 metadata:
   openclaw:
     requires:
       env:
         - OPENAI_API_KEY
-        - GOOGLE_SHEETS_ID
-        - GOOGLE_SERVICE_ACCOUNT_KEY
+        - CLAWSHIER_GOOGLE_SHEETS_ID
+      config:
+        - browser.enabled
     primaryEnv: OPENAI_API_KEY
 tags:
   - expenses
@@ -21,7 +22,7 @@ tags:
   - automation
 ---
 
-# Receipt Expense Tracker
+# Clawshier
 
 Process receipt and invoice photos into structured expenses and log them to Google Sheets.
 
@@ -45,7 +46,7 @@ Run each step sequentially. If a step fails, retry it up to **2 times** before r
 Save the received image to a temporary file, then extract text:
 
 ```bash
-node skills/receipt_ocr/handler.js --image <path_to_image>
+node {baseDir}/skills/receipt_ocr/handler.js --image <path_to_image>
 ```
 
 Output schema:
@@ -59,7 +60,7 @@ Output schema:
 Pipe the OCR output to the structurer:
 
 ```bash
-echo '<step1_output>' | node skills/expense_structurer/handler.js
+echo '<step1_output>' | node {baseDir}/skills/expense_structurer/handler.js
 ```
 
 Output schema:
@@ -84,14 +85,15 @@ Output schema:
 Pipe the structured expense to the validator:
 
 ```bash
-echo '<step2_output>' | node skills/expense_validator/handler.js
+echo '<step2_output>' | node {baseDir}/skills/expense_validator/handler.js
 ```
 
 This step:
 - Generates a SHA-256 fingerprint from `vendor + date + total`
-- Checks Google Sheets for duplicate fingerprints
+- Checks a local fingerprint store (`~/.clawshier/fingerprints.json`) for duplicates
 - Normalizes currency codes and trims whitespace
 - Validates all required fields are present
+- Saves the fingerprint locally on success
 
 If a **duplicate is found**, stop the pipeline and tell the user:
 
@@ -113,27 +115,44 @@ Output schema (adds `fingerprint` field):
 }
 ```
 
-### Step 4 — Store
+### Step 4 — Store (Browser)
 
-Pipe the validated expense to the store:
+Use the `browser` tool to add the expense to Google Sheets. The spreadsheet URL is in the `CLAWSHIER_GOOGLE_SHEETS_ID` environment variable.
 
-```bash
-echo '<step3_output>' | node skills/expense_store_sheets/handler.js
-```
+Expected spreadsheet columns (Row 1 headers): Date | Vendor | Category | Items | Subtotal | Tax | Total | Currency | Fingerprint | Added At
 
-Appends a row with columns: Date, Vendor, Category, Items, Subtotal, Tax, Total, Currency, Fingerprint, Added At.
+Follow these steps:
 
-Output schema:
+1. Open the spreadsheet URL in the browser:
+   ```
+   browser open $CLAWSHIER_GOOGLE_SHEETS_ID
+   ```
 
-```json
-{ "success": true, "row": 42 }
-```
+2. Wait for the page to load, then take a snapshot to understand the sheet layout.
+
+3. Find the first empty row after existing data.
+
+4. Click on cell A of the empty row and type each value across the columns:
+   - **A**: `{date}`
+   - **B**: `{vendor}`
+   - **C**: `{category}`
+   - **D**: Items summary (e.g. `Caffe Latte x1; Muffin x2`)
+   - **E**: `{subtotal}`
+   - **F**: `{tax}`
+   - **G**: `{total}`
+   - **H**: `{currency}`
+   - **I**: `{fingerprint}`
+   - **J**: Current ISO timestamp
+
+5. Press Enter to confirm the last cell, then close the browser tab.
+
+If the browser is not available or Google Sheets fails to load, report the error to the user and suggest they check their browser configuration and Google login.
 
 ## Response
 
 After a successful pipeline run, reply with a short summary:
 
-> Added expense: **{vendor}** — {total} {currency} on {date} ({category}). Row #{row} in your spreadsheet.
+> Added expense: **{vendor}** — {total} {currency} on {date} ({category}).
 
 ## Error Handling
 
@@ -147,7 +166,7 @@ After a successful pipeline run, reply with a short summary:
 ```bash
 npm install
 cp .env.example .env
-# Fill in OPENAI_API_KEY, GOOGLE_SHEETS_ID, GOOGLE_SERVICE_ACCOUNT_KEY
+# Fill in OPENAI_API_KEY and CLAWSHIER_GOOGLE_SHEETS_ID
 ```
 
 See `README.md` for full setup instructions.
