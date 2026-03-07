@@ -9,7 +9,7 @@ metadata:
     requires:
       env:
         - OPENAI_API_KEY
-        - CLAWSHIER_GOOGLE_SHEETS_ID
+        - CLAWSHIER_GOOGLE_SHEETS_URL
       config:
         - browser.enabled
     primaryEnv: OPENAI_API_KEY
@@ -117,7 +117,7 @@ Output schema (adds `fingerprint` field):
 
 ### Step 4 — Store (Browser)
 
-Use the `browser` tool to add the expense to Google Sheets. The spreadsheet URL is in the `CLAWSHIER_GOOGLE_SHEETS_ID` environment variable.
+Use the `browser` tool to add the expense to Google Sheets. The spreadsheet URL is in the `CLAWSHIER_GOOGLE_SHEETS_URL` environment variable.
 
 Expected spreadsheet columns (Row 1 headers): Date | Vendor | Category | Items | Subtotal | Tax | Total | Currency | Fingerprint | Added At
 
@@ -125,7 +125,7 @@ Follow these steps:
 
 1. Open the spreadsheet URL in the browser:
    ```
-   browser open $CLAWSHIER_GOOGLE_SHEETS_ID
+   browser open $CLAWSHIER_GOOGLE_SHEETS_URL
    ```
 
 2. Wait for the page to load, then take a snapshot to understand the sheet layout.
@@ -166,7 +166,7 @@ After a successful pipeline run, reply with a short summary:
 ```bash
 npm install
 cp .env.example .env
-# Fill in OPENAI_API_KEY and CLAWSHIER_GOOGLE_SHEETS_ID
+# Fill in OPENAI_API_KEY and CLAWSHIER_GOOGLE_SHEETS_URL
 ```
 
 See `README.md` for full setup instructions.

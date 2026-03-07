@@ -24,7 +24,7 @@ Fill in `.env` with your credentials (see `.env.example`).
 
 1. Create a Google Spreadsheet
 2. Add column headers in Row 1: `Date`, `Vendor`, `Category`, `Items`, `Subtotal`, `Tax`, `Total`, `Currency`, `Fingerprint`, `Added At`
-3. Copy the spreadsheet URL and paste it as `CLAWSHIER_GOOGLE_SHEETS_ID` in `.env`
+3. Copy the spreadsheet URL and paste it as `CLAWSHIER_GOOGLE_SHEETS_URL` in `.env`
 4. Make sure you're logged into Google in your OpenClaw browser profile
 
 ### OpenClaw usage
