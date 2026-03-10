@@ -2,10 +2,17 @@
 require("dotenv").config({ path: require("path").resolve(__dirname, "../../.env") });
 
 const { fingerprint } = require("../../lib/hashing");
-const { getColumn } = require("../../lib/googleSheets");
+const { getColumn, sheetExists } = require("../../lib/googleSheets");
 
 const CURRENCY_ALIASES = { "$": "USD", "€": "EUR", "£": "GBP", "¥": "JPY" };
-const FINGERPRINT_COLUMN = "I";
+const FINGERPRINT_COLUMN = "A";
+
+function sheetNameFromDate(dateStr) {
+  const d = new Date(dateStr + "T00:00:00");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const yy = String(d.getFullYear()).slice(-2);
+  return `${mm}-${yy}`;
+}
 
 function normalize(expense) {
   expense.vendor = (expense.vendor || "").trim();
@@ -42,12 +49,16 @@ async function main() {
   expense.fingerprint = fingerprint(expense.vendor, expense.date, expense.total);
 
   const spreadsheetId = process.env.GOOGLE_SHEETS_ID;
-  const existing = await getColumn(spreadsheetId, FINGERPRINT_COLUMN);
+  const sheetName = sheetNameFromDate(expense.date);
 
-  if (existing.includes(expense.fingerprint)) {
-    throw new Error(
-      `Duplicate receipt detected (vendor: ${expense.vendor}, date: ${expense.date}, total: ${expense.total})`
-    );
+  const tabExists = await sheetExists(spreadsheetId, sheetName);
+  if (tabExists) {
+    const existing = await getColumn(spreadsheetId, sheetName, FINGERPRINT_COLUMN);
+    if (existing.includes(expense.fingerprint)) {
+      throw new Error(
+        `Duplicate receipt detected (vendor: ${expense.vendor}, date: ${expense.date}, total: ${expense.total})`
+      );
+    }
   }
 
   process.stdout.write(JSON.stringify(expense));

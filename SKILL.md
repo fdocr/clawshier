@@ -89,7 +89,9 @@ echo '<step2_output>' | node skills/expense_validator/handler.js
 
 This step:
 - Generates a SHA-256 fingerprint from `vendor + date + total`
-- Checks Google Sheets for duplicate fingerprints
+- Derives the sheet tab name from the expense date (MM-YY format)
+- Checks the matching monthly sheet for duplicate fingerprints (column A)
+- If the sheet tab doesn't exist yet, skips the duplicate check
 - Normalizes currency codes and trims whitespace
 - Validates all required fields are present
 
@@ -121,7 +123,11 @@ Pipe the validated expense to the store:
 echo '<step3_output>' | node skills/expense_store_sheets/handler.js
 ```
 
-Appends a row with columns: Date, Vendor, Category, Items, Subtotal, Tax, Total, Currency, Fingerprint, Added At.
+This step writes to two sheets:
+
+**Monthly expense sheet** (tab named MM-YY, e.g. `03-26`): created automatically with headers if it doesn't exist. Columns: Fingerprint, Date, Vendor, Category, Subtotal, Tax, Total, Currency.
+
+**Invoice Archive Breakdown** (single persistent tab): created automatically with headers if it doesn't exist. Columns: Fingerprint, Item, Quantity, Cost. One row per line item from the expense, linked to the monthly sheet via Fingerprint.
 
 Output schema:
 
@@ -133,7 +139,7 @@ Output schema:
 
 After a successful pipeline run, reply with a short summary:
 
-> Added expense: **{vendor}** — {total} {currency} on {date} ({category}). Row #{row} in your spreadsheet.
+> Added expense: **{vendor}** — {total} {currency} on {date} ({category}). Row #{row} in your spreadsheet (tab {MM-YY}).
 
 ## Error Handling
 
