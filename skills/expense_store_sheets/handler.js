@@ -24,6 +24,13 @@ async function main() {
   for await (const chunk of process.stdin) input += chunk;
 
   const expense = JSON.parse(input);
+
+  if (!expense.fingerprint) {
+    throw new Error(
+      "Missing fingerprint — ensure the expense passed through the validator (step 3) before storing"
+    );
+  }
+
   const spreadsheetId = process.env.GOOGLE_SHEETS_ID;
   const sheetName = sheetNameFromDate(expense.date);
 
