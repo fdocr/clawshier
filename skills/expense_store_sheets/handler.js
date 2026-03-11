@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 require("dotenv").config({ path: require("path").resolve(__dirname, "../../.env") });
 
-const { ensureSheet, appendRow, appendRows } = require("../../lib/googleSheets");
+const {
+  ensureSheet, deleteSheetIfExists, appendRow, appendRows, updateSummary,
+} = require("../../lib/googleSheets");
 
 const EXPENSE_HEADERS = [
   "Fingerprint", "Date", "Vendor", "Category",
@@ -50,6 +52,9 @@ async function main() {
   ]);
 
   await appendRows(spreadsheetId, BREAKDOWN_SHEET, itemRows);
+
+  await deleteSheetIfExists(spreadsheetId, "Sheet1");
+  await updateSummary(spreadsheetId);
 
   process.stdout.write(JSON.stringify({ success: true, row: rowNumber }));
 }

@@ -123,11 +123,15 @@ Pipe the validated expense to the store:
 echo '<step3_output>' | node skills/expense_store_sheets/handler.js
 ```
 
-This step writes to two sheets:
+This step writes to three sheets and performs cleanup:
 
 **Monthly expense sheet** (tab named MM-YY, e.g. `03-26`): created automatically with headers if it doesn't exist. Columns: Fingerprint, Date, Vendor, Category, Subtotal, Tax, Total, Currency.
 
 **Invoice Archive Breakdown** (single persistent tab): created automatically with headers if it doesn't exist. Columns: Fingerprint, Item, Quantity, Cost. One row per line item from the expense, linked to the monthly sheet via Fingerprint.
+
+**Summary** (first tab): rebuilt on every store. Columns: Month (human-readable, e.g. "March 2026"), Total. Sorted most recent month first. Includes a line chart of monthly expense totals over time. All headers are bold with a frozen first row.
+
+Additionally, the default "Sheet1" tab is deleted if it exists.
 
 Output schema:
 
