@@ -6,46 +6,68 @@ const { getColumn, sheetExists } = require("../../lib/googleSheets");
 
 const CURRENCY_ALIASES = { "$": "USD", "€": "EUR", "£": "GBP", "¥": "JPY" };
 const FINGERPRINT_COLUMN = "A";
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+const STRICT_ISO = /^\d{4}-\d{2}-\d{2}$/;
 
-function normalizeDate(raw) {
-  raw = (raw || "").trim();
+function parseOverrideDate() {
+  const idx = process.argv.indexOf("--date");
+  if (idx === -1 || !process.argv[idx + 1]) return null;
+  const val = process.argv[idx + 1];
+  if (!STRICT_ISO.test(val)) {
+    throw new Error(`--date must be in YYYY-MM-DD format, received: "${val}"`);
+  }
+  const d = new Date(val + "T00:00:00");
+  if (isNaN(d.getTime())) {
+    throw new Error(`--date is not a valid date: "${val}"`);
+  }
+  return val;
+}
 
-  if (ISO_DATE.test(raw)) {
+function toIso(year, month, day) {
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+function resolveDate(raw) {
+  raw = (raw || "").replace(/[T ].*$/, "").trim();
+  if (!raw) throw new Error("Date field is empty");
+
+  if (STRICT_ISO.test(raw)) {
     const d = new Date(raw + "T00:00:00");
     if (!isNaN(d.getTime())) return raw;
   }
 
-  const slashOrDash = raw.match(/^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{2,4})$/);
-  if (slashOrDash) {
-    let [, a, b, yearPart] = slashOrDash;
-    let year = parseInt(yearPart, 10);
-    if (year < 100) year += 2000;
-    a = parseInt(a, 10);
-    b = parseInt(b, 10);
+  const parts = raw.match(/^(\d{1,4})[/\-.](\d{1,2})[/\-.](\d{1,4})$/);
+  if (!parts) throw new Error(`Unable to parse date: "${raw}"`);
 
-    let month, day;
-    if (a > 12 && b <= 12) {
-      day = a; month = b;
-    } else if (b > 12 && a <= 12) {
-      month = a; day = b;
-    } else {
-      month = a; day = b;
-    }
+  let [, p1, p2, p3] = parts.map((v, i) => (i === 0 ? v : parseInt(v, 10)));
+  p1 = parseInt(p1, 10);
 
-    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
-      const iso = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-      const d = new Date(iso + "T00:00:00");
-      if (!isNaN(d.getTime())) return iso;
-    }
+  let year, a, b;
+  if (p3 >= 100) {
+    year = p3; a = p1; b = p2;
+  } else if (p1 >= 100) {
+    year = p1; a = p2; b = p3;
+  } else {
+    year = p3 + 2000; a = p1; b = p2;
   }
 
-  const d = new Date(raw);
-  if (!isNaN(d.getTime())) {
-    return d.toISOString().slice(0, 10);
-  }
+  const today = new Date();
+  const todayMonth = today.getMonth() + 1;
+  const todayDay = today.getDate();
 
-  throw new Error(`Unable to parse date: "${raw}"`);
+  const mmdd = { month: a, day: b };
+  const ddmm = { month: b, day: a };
+
+  const mmddMatch = mmdd.month === todayMonth && mmdd.day === todayDay;
+  const ddmmMatch = ddmm.month === todayMonth && ddmm.day === todayDay;
+
+  if (mmddMatch && ddmmMatch) return toIso(year, a, b);
+  if (mmddMatch) return toIso(year, mmdd.month, mmdd.day);
+  if (ddmmMatch) return toIso(year, ddmm.month, ddmm.day);
+
+  throw new Error(
+    `Date "${raw}" does not match today (${toIso(today.getFullYear(), todayMonth, todayDay)}). ` +
+    "For old invoices, re-run with --date YYYY-MM-DD to set the date explicitly."
+  );
 }
 
 function sheetNameFromDate(dateStr) {
@@ -55,9 +77,9 @@ function sheetNameFromDate(dateStr) {
   return `${mm}-${yy}`;
 }
 
-function normalize(expense) {
+function normalize(expense, overrideDate) {
   expense.vendor = (expense.vendor || "").trim();
-  expense.date = normalizeDate(expense.date);
+  expense.date = overrideDate || resolveDate(expense.date);
   expense.category = (expense.category || "Other").trim();
 
   if (CURRENCY_ALIASES[expense.currency]) {
@@ -78,19 +100,14 @@ function validate(expense) {
   if (!expense.date) missing.push("date");
   if (!expense.total) missing.push("total");
   if (missing.length) throw new Error(`Missing required fields: ${missing.join(", ")}`);
-
-  const d = new Date(expense.date + "T00:00:00");
-  const now = new Date();
-  now.setDate(now.getDate() + 7);
-  if (d > now) throw new Error(`Date "${expense.date}" is in the future`);
-  if (d.getFullYear() < 2000) throw new Error(`Date "${expense.date}" has an unreasonable year`);
 }
 
 async function main() {
   let input = "";
   for await (const chunk of process.stdin) input += chunk;
 
-  const expense = normalize(JSON.parse(input));
+  const overrideDate = parseOverrideDate();
+  const expense = normalize(JSON.parse(input), overrideDate);
   validate(expense);
 
   expense.fingerprint = fingerprint(expense.vendor, expense.date, expense.total);

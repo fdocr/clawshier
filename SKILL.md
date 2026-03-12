@@ -87,13 +87,24 @@ Pipe the structured expense to the validator:
 echo '<step2_output>' | node skills/expense_validator/handler.js
 ```
 
+For **old invoices** (when the user explicitly provides a date), pass the `--date` flag:
+
+```bash
+echo '<step2_output>' | node skills/expense_validator/handler.js --date 2026-01-15
+```
+
 This step:
+- **Resolves the date** — the date from step 2 may arrive in any format (MM-DD-YYYY, DD-MM-YYYY, etc.). The validator compares it against today's date to determine the correct interpretation and normalizes to YYYY-MM-DD. If the `--date YYYY-MM-DD` flag is provided, it uses that value directly and skips auto-detection.
 - Generates a SHA-256 fingerprint from `vendor + date + total`
 - Derives the sheet tab name from the expense date (MM-YY format)
 - Checks the matching monthly sheet for duplicate fingerprints (column A)
 - If the sheet tab doesn't exist yet, skips the duplicate check
 - Normalizes currency codes and trims whitespace
 - Validates all required fields are present
+
+**Date resolution**: invoices are expected to be processed the same day they are issued. The validator tests both MM-DD and DD-MM interpretations and picks the one matching today. If neither matches, the validator returns an error asking the user to provide the date explicitly via `--date`.
+
+**Old invoice flow**: if the user says the image is an old invoice and provides a date (e.g. "this is from 2026-01-15"), pass that date using `--date 2026-01-15`. The value **must** be in YYYY-MM-DD format or the validator will reject it with a clear error.
 
 If a **duplicate is found**, stop the pipeline and tell the user:
 

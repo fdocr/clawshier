@@ -9,11 +9,7 @@ const model = process.env.OPENAI_MODEL || "gpt-4o";
 const SYSTEM_PROMPT = `You are a receipt parser. Given raw OCR text from a receipt or invoice, extract structured data as JSON.
 
 Required fields:
-- date: MUST be in YYYY-MM-DD format. Infer the year if missing.
-  Date format detection: first determine the receipt language from the OCR text.
-  - If the text is in English, assume US convention: MM/DD/YYYY (month first).
-  - If the text is in Spanish or another non-English language, assume DD/MM/YYYY (day first).
-  - If the format is unambiguous (e.g. day > 12), use the only valid interpretation.
+- date: The date as it appears on the receipt, including day, month, and year. Preserve the original format (do not reorder components). Infer the year if missing.
 - vendor: Business or store name.
 - items: Array of { description, quantity, amount }. Use quantity 1 if not specified.
 - subtotal: Number. If missing, sum the item amounts.
