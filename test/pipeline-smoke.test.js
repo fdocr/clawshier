@@ -31,7 +31,11 @@ test("mock pipeline runs end-to-end and detects duplicates", () => {
     path.join(fixtureDir, "sample-receipt.png"),
   ]);
   const structured = runNode(path.join(repoDir, "skills/expense_structurer/handler.js"), [], ocr);
-  const validated = runNode(path.join(repoDir, "skills/expense_validator/handler.js"), [], structured);
+  const validated = runNode(
+    path.join(repoDir, "skills/expense_validator/handler.js"),
+    ["--date", "2026-03-25"],
+    structured
+  );
   const stored = runNode(path.join(repoDir, "skills/expense_store_sheets/handler.js"), [], validated);
 
   const storedJson = JSON.parse(stored);
@@ -46,7 +50,11 @@ test("mock pipeline runs end-to-end and detects duplicates", () => {
   assert.deepEqual(db.sheets.Summary.rows[1], ["March 2026", 8.5]);
 
   assert.throws(
-    () => runNode(path.join(repoDir, "skills/expense_validator/handler.js"), [], structured),
+    () => runNode(
+      path.join(repoDir, "skills/expense_validator/handler.js"),
+      ["--date", "2026-03-25"],
+      structured
+    ),
     /Duplicate receipt detected/
   );
 });
