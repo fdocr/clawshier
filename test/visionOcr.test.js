@@ -12,14 +12,14 @@ const {
   runOcrWithProvider,
 } = require("../lib/visionOcr");
 
-test("getVisionConfig defaults to auto with ollama defaults", () => {
+test("getVisionConfig defaults to openai with ollama defaults", () => {
   const config = getVisionConfig({ OPENAI_MODEL: "gpt-4o-mini" });
 
-  assert.equal(config.provider, "auto");
+  assert.equal(config.provider, "openai");
   assert.equal(config.openaiModel, "gpt-4o-mini");
   assert.equal(config.ollamaModel, "llama3.2-vision:latest");
   assert.equal(config.ollamaHost, "http://127.0.0.1:11434");
-  assert.equal(config.ollamaMaxDimension, 512);
+  assert.equal(config.ollamaMaxDimension, 1024);
 });
 
 test("getVisionConfig rejects unknown providers", () => {
