@@ -6,26 +6,23 @@ OpenClaw skill that processes receipt/invoice photos from any chat channel, extr
 
 Clawshier supports OCR via:
 
+- **OpenAI Vision** (default) using `gpt-4o`
 - **Ollama** (local) using `llama3.2-vision:latest`
-- **OpenAI Vision** as a fallback or explicit provider
 
-By default, OCR uses:
+By default, OCR uses OpenAI:
 
 ```env
-CLAWSHIER_VISION_PROVIDER=auto
+CLAWSHIER_VISION_PROVIDER=openai
 ```
 
-That means:
-
-1. try Ollama first
-2. if Ollama is unavailable or fails, fall back to OpenAI automatically
+Set `CLAWSHIER_VISION_PROVIDER=ollama` to use a local Ollama model instead, or `auto` to try Ollama first and fall back to OpenAI.
 
 ## Prerequisites
 
 - Node.js 18+
 - Google Cloud service account with Sheets API enabled
-- **Optional but recommended:** OpenAI API key for fallback OCR
-- **Optional:** Ollama running locally with `llama3.2-vision:latest`
+- OpenAI API key for OCR and structuring
+- **Optional:** Ollama running locally with `llama3.2-vision:latest` (if using ollama provider)
 
 ## Install
 
@@ -49,7 +46,7 @@ npm install
 Example `.env`:
 
 ```env
-CLAWSHIER_VISION_PROVIDER=auto
+CLAWSHIER_VISION_PROVIDER=openai
 CLAWSHIER_OLLAMA_MODEL=llama3.2-vision:latest
 CLAWSHIER_OLLAMA_HOST=http://127.0.0.1:11434
 CLAWSHIER_OLLAMA_MAX_DIMENSION=512
@@ -61,9 +58,9 @@ GOOGLE_SERVICE_ACCOUNT_KEY=path/to/service-account.json
 
 Provider modes:
 
-- `auto` — prefer Ollama, fall back to OpenAI
+- `openai` — use OpenAI only (default)
 - `ollama` — use Ollama only
-- `openai` — use OpenAI only
+- `auto` — try Ollama first, fall back to OpenAI
 
 For local Ollama OCR, Clawshier downsizes images on macOS with `sips` before sending them to the model. Use `CLAWSHIER_OLLAMA_MAX_DIMENSION` to tune that behavior.
 
