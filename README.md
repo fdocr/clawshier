@@ -1,33 +1,73 @@
 # Clawshier
 
-OpenClaw skill that processes receipt/invoice photos from any chat channel, extracts expense data via OpenAI Vision, and logs it to a Google Spreadsheet.
+OpenClaw skill that processes receipt/invoice photos from any chat channel, extracts expense data, and logs it to a Google Spreadsheet.
+
+## OCR backends
+
+Clawshier supports OCR via:
+
+- **OpenAI Vision** (default) using `gpt-4o`
+- **Ollama** (local) using `llama3.2-vision:latest`
+
+By default, OCR uses OpenAI:
+
+```env
+CLAWSHIER_VISION_PROVIDER=openai
+```
+
+Set `CLAWSHIER_VISION_PROVIDER=ollama` to use a local Ollama model instead, or `auto` to try Ollama first and fall back to OpenAI.
 
 ## Prerequisites
 
 - Node.js 18+
-- OpenAI API key
 - Google Cloud service account with Sheets API enabled
+- OpenAI API key for OCR and structuring
+- **Optional:** Ollama running locally with `llama3.2-vision:latest` (if using ollama provider)
 
 ## Install
 
+### Option A: via ClawHub
+
+In your OpenClaw chat:
+
+1. Run `/clawhub` to make sure ClawHub is configured
+2. Run `/clawhub install clawshier`
+3. Ask OpenClaw to verify Clawshier is set up correctly
+
+### Option B: manual clone
+
 ```bash
-clawhub install clawshier
-clawhub update clawshier
-```
-
-The skill is available on [ClawHub](https://clawhub.ai/fdocr/clawshier).
-
-If you prefer to install manually instead of using the CLI:
-
-```bash
+cd ~/.openclaw/workspace/skills
 git clone https://github.com/fdocr/clawshier.git
 cd clawshier
 npm install
+cp .env.example .env  # then fill in your keys
 ```
 
-After installing, configure the required environment variables (`OPENAI_API_KEY`, `GOOGLE_SHEETS_ID`, `GOOGLE_SERVICE_ACCOUNT_KEY`) in your OpenClaw environment.
+## Configuration
 
-### Google Sheets setup
+Example `.env`:
+
+```env
+CLAWSHIER_VISION_PROVIDER=openai
+CLAWSHIER_OLLAMA_MODEL=llama3.2-vision:latest
+CLAWSHIER_OLLAMA_HOST=http://127.0.0.1:11434
+CLAWSHIER_OLLAMA_MAX_DIMENSION=512
+OPENAI_API_KEY=
+OPENAI_MODEL=gpt-4o
+GOOGLE_SHEETS_ID=
+GOOGLE_SERVICE_ACCOUNT_KEY=path/to/service-account.json
+```
+
+Provider modes:
+
+- `openai` — use OpenAI only (default)
+- `ollama` — use Ollama only
+- `auto` — try Ollama first, fall back to OpenAI
+
+For local Ollama OCR, Clawshier downsizes images on macOS with `sips` before sending them to the model. Use `CLAWSHIER_OLLAMA_MAX_DIMENSION` to tune that behavior.
+
+## Google Sheets setup
 
 1. Create a Google Cloud service account and download the JSON key file
    - Go to [Service Accounts](https://console.cloud.google.com/iam-admin/serviceaccounts) in the Google Cloud Console
