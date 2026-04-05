@@ -26,19 +26,22 @@ Set `CLAWSHIER_VISION_PROVIDER=ollama` to use a local Ollama model instead, or `
 
 ## Install
 
+### Option A: via ClawHub
+
+In your OpenClaw chat:
+
+1. Run `/clawhub` to make sure ClawHub is configured
+2. Run `/clawhub install clawshier`
+3. Ask OpenClaw to verify Clawshier is set up correctly
+
+### Option B: manual clone
+
 ```bash
-clawhub install clawshier
-clawhub update clawshier
-```
-
-The skill is available on [ClawHub](https://clawhub.ai/fdocr/clawshier).
-
-If you prefer to install manually instead of using the CLI:
-
-```bash
+cd ~/.openclaw/workspace/skills
 git clone https://github.com/fdocr/clawshier.git
 cd clawshier
 npm install
+cp .env.example .env  # then fill in your keys
 ```
 
 ## Configuration
