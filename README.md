@@ -2,6 +2,8 @@
 
 OpenClaw skill that processes receipt/invoice photos from any chat channel, extracts expense data, and logs it to a Google Spreadsheet.
 
+![Google Sheets - Summary sheet from Clawshier processing](clawshier_summary.png)
+
 ## OCR backends
 
 Clawshier supports OCR via:
