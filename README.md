@@ -69,6 +69,16 @@ For local Ollama OCR, Clawshier downsizes images on macOS with `sips` before sen
 
 For debugging, you can ask OpenClaw to process a receipt in `verbose` mode to include the per-step trace in the reply. You can also enable handler-level tracing with `CLAWSHIER_TRACE=1`.
 
+## Safe automation
+
+For automation, prefer the built-in pipeline runner instead of shell-piping untrusted OCR/LLM output between handlers:
+
+```bash
+node scripts/run_pipeline.js --image /path/to/receipt.jpg --date 2026-03-25
+```
+
+The individual handlers still work for testing, and now also support `--input-file` / `--output-file` for safer composition.
+
 ## Google Sheets setup
 
 1. Create a Google Cloud service account and download the JSON key file

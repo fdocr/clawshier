@@ -6,6 +6,7 @@ const {
 } = require("../../lib/googleSheets");
 const { sheetNameFromDate } = require("../../lib/expenseValidator");
 const { isTraceEnabled, readTrace, writeTrace, startTraceStep, finishTraceStep } = require("../../lib/trace");
+const { readJsonInput, writeJsonOutput } = require("../../lib/io");
 
 const EXPENSE_HEADERS = [
   "Fingerprint", "Date", "Vendor", "Category",
@@ -15,14 +16,11 @@ const BREAKDOWN_SHEET = "Invoice Archive Breakdown";
 const BREAKDOWN_HEADERS = ["Fingerprint", "Item", "Quantity", "Cost"];
 
 async function main() {
-  let input = "";
-  for await (const chunk of process.stdin) input += chunk;
+  const expense = await readJsonInput();
 
   const traceEnabled = isTraceEnabled();
   const trace = traceEnabled ? (readTrace() || { steps: [] }) : null;
   const traceStep = traceEnabled ? startTraceStep("store", { kind: "google-sheets" }) : null;
-
-  const expense = JSON.parse(input);
 
   if (!expense.fingerprint) {
     throw new Error(
@@ -72,7 +70,7 @@ async function main() {
     writeTrace(trace);
   }
 
-  process.stdout.write(JSON.stringify({ success: true, row: rowNumber }));
+  writeJsonOutput({ success: true, row: rowNumber });
 }
 
 main().catch((err) => {

@@ -17,94 +17,43 @@ Process a receipt or invoice image through a four-step pipeline, then reply with
 
 ## Workflow
 
-Run these steps sequentially. If a step fails, retry it up to **2 times** before surfacing the error.
+Run the safe pipeline runner. If it fails, retry it up to **2 times** before surfacing the error.
 
-### Step 1 — OCR
+### Primary path — Safe pipeline runner
 
 Run:
 
 ```bash
-node {baseDir}/skills/receipt_ocr/handler.js --image <path_to_image>
-```
-
-Expected output:
-
-```json
-{ "ocr_text": "STARBUCKS\n123 Main St..." }
-```
-
-If OCR reports that the image is not a receipt or invoice, tell the user:
-
-> I couldn't detect a receipt or invoice in that image. Could you try again with a clearer photo?
-
-### Step 2 — Structure
-
-Pipe the OCR output directly into the structurer:
-
-```bash
-printf '%s' '<step1_output>' | node {baseDir}/skills/expense_structurer/handler.js
-```
-
-Do not manually rewrite the JSON. Preserve the model output for the validator.
-
-Expected output:
-
-```json
-{
-  "date": "03/25/2026",
-  "vendor": "Starbucks",
-  "items": [
-    { "description": "Caffe Latte", "quantity": 1, "amount": 5.95 }
-  ],
-  "subtotal": 5.95,
-  "tax": 0.52,
-  "total": 6.47,
-  "currency": "USD",
-  "category": "Food & Drink"
-}
-```
-
-### Step 3 — Validate and deduplicate
-
-Pipe the structured expense directly into the validator:
-
-```bash
-printf '%s' '<step2_output>' | node {baseDir}/skills/expense_validator/handler.js
+node {baseDir}/scripts/run_pipeline.js --image <path_to_image>
 ```
 
 If the user explicitly provided a date, always pass it in ISO format:
 
 ```bash
-printf '%s' '<step2_output>' | node {baseDir}/skills/expense_validator/handler.js --date 2026-03-25
+node {baseDir}/scripts/run_pipeline.js --image <path_to_image> --date 2026-03-25
 ```
 
-This step:
+This runner performs OCR → structure → validate/deduplicate → store internally using JSON files, not shell-interpolated pipeline strings.
 
-- normalizes the receipt date to `YYYY-MM-DD`
-- normalizes currency and item defaults
-- generates the expense fingerprint
-- derives the monthly sheet tab name (`MM-YY`)
-- checks for duplicate fingerprints in that monthly tab when it exists
-
-If the validator reports a duplicate, stop and tell the user:
-
-> This receipt appears to already be logged (vendor, date, total match an existing entry). Skipping.
-
-### Step 4 — Store
-
-Pipe the validated expense directly into the storage handler:
-
-```bash
-printf '%s' '<step3_output>' | node {baseDir}/skills/expense_store_sheets/handler.js
-```
-
-This step writes to:
+It writes to:
 
 - the monthly expense tab (`MM-YY`)
 - `Invoice Archive Breakdown`
 - `Summary`
 
 It also removes the default `Sheet1` tab if present.
+
+### Handler compatibility note
+
+The individual handlers still support stdin/stdout for testing, but when automating the skill, prefer `scripts/run_pipeline.js` or the handlers' `--input-file/--output-file` options instead of embedding untrusted receipt/LLM output into shell commands.
+
+If OCR reports that the image is not a receipt or invoice, tell the user:
+
+> I couldn't detect a receipt or invoice in that image. Could you try again with a clearer photo?
+
+If the validator reports a duplicate, stop and tell the user:
+
+> This receipt appears to already be logged (vendor, date, total match an existing entry). Skipping.
 
 ## Success reply
 

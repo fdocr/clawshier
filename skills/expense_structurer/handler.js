@@ -5,6 +5,7 @@ const fs = require("fs");
 const path = require("path");
 const OpenAI = require("openai");
 const { isTraceEnabled, readTrace, writeTrace, startTraceStep, finishTraceStep } = require("../../lib/trace");
+const { readJsonInput, writeJsonOutput } = require("../../lib/io");
 
 const isTestMode = process.env.CLAWSHIER_TEST_MODE === "1";
 const openai = isTestMode ? null : new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -30,10 +31,7 @@ function readMockStructured() {
 }
 
 async function main() {
-  let input = "";
-  for await (const chunk of process.stdin) input += chunk;
-
-  const { ocr_text } = JSON.parse(input);
+  const { ocr_text } = await readJsonInput();
   if (!ocr_text) throw new Error("Missing ocr_text in input");
 
   const traceEnabled = isTraceEnabled();
@@ -50,7 +48,7 @@ async function main() {
       trace.steps.push(finishTraceStep(traceStep, { provider: "mock", status: "ok" }));
       writeTrace(trace);
     }
-    process.stdout.write(JSON.stringify(output));
+    writeJsonOutput(output);
     return;
   }
 
@@ -81,7 +79,7 @@ async function main() {
     writeTrace(trace);
   }
 
-  process.stdout.write(JSON.stringify(structured));
+  writeJsonOutput(structured);
 }
 
 main().catch((err) => {

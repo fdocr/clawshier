@@ -26,17 +26,12 @@ function runNode(scriptPath, args = [], input = undefined) {
 }
 
 test("mock pipeline runs end-to-end and detects duplicates", () => {
-  const ocr = runNode(path.join(repoDir, "skills/receipt_ocr/handler.js"), [
+  const stored = runNode(path.join(repoDir, "scripts/run_pipeline.js"), [
     "--image",
     path.join(fixtureDir, "sample-receipt.png"),
+    "--date",
+    "2026-03-25",
   ]);
-  const structured = runNode(path.join(repoDir, "skills/expense_structurer/handler.js"), [], ocr);
-  const validated = runNode(
-    path.join(repoDir, "skills/expense_validator/handler.js"),
-    ["--date", "2026-03-25"],
-    structured
-  );
-  const stored = runNode(path.join(repoDir, "skills/expense_store_sheets/handler.js"), [], validated);
 
   const storedJson = JSON.parse(stored);
   assert.equal(storedJson.success, true);
@@ -50,11 +45,12 @@ test("mock pipeline runs end-to-end and detects duplicates", () => {
   assert.deepEqual(db.sheets.Summary.rows[1], ["March 2026", 8.5]);
 
   assert.throws(
-    () => runNode(
-      path.join(repoDir, "skills/expense_validator/handler.js"),
-      ["--date", "2026-03-25"],
-      structured
-    ),
+    () => runNode(path.join(repoDir, "scripts/run_pipeline.js"), [
+      "--image",
+      path.join(fixtureDir, "sample-receipt.png"),
+      "--date",
+      "2026-03-25",
+    ]),
     /Duplicate receipt detected/
   );
 });

@@ -5,6 +5,7 @@ const fs = require("fs");
 const path = require("path");
 const { runOcrWithProvider } = require("../../lib/visionOcr");
 const { isTraceEnabled, readTrace, writeTrace, startTraceStep, finishTraceStep } = require("../../lib/trace");
+const { writeJsonOutput } = require("../../lib/io");
 
 const isTestMode = process.env.CLAWSHIER_TEST_MODE === "1";
 
@@ -42,7 +43,7 @@ async function main() {
       }));
       writeTrace(trace);
     }
-    process.stdout.write(JSON.stringify(output));
+    writeJsonOutput(output);
     return;
   }
 
@@ -57,7 +58,7 @@ async function main() {
     }));
     writeTrace(trace);
   }
-  process.stdout.write(JSON.stringify({ ocr_text: ocrText }));
+  writeJsonOutput({ ocr_text: ocrText });
 }
 
 main().catch((err) => {
