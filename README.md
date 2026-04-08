@@ -80,6 +80,7 @@ For debugging, you can ask OpenClaw to process a receipt in `verbose` mode to in
 2. Enable the [Google Sheets API](https://console.cloud.google.com/apis/library/sheets.googleapis.com) in your project
 3. Create an empty spreadsheet and share it with the service account email
 4. Add the spreadsheet ID and key file path to `.env`
+   - Suggestion: Place the JSON file in ~/.openclaw/credentials and use a fully resolved path in the `.env` key instead of the the `~` shortcut
 
 The skill automatically manages all sheet tabs (monthly expense sheets, Invoice Archive Breakdown, and Summary with chart). The default "Sheet1" tab is deleted on first use.
 
