@@ -5,6 +5,7 @@ const {
   ensureSheet, deleteSheetIfExists, appendRow, appendRows, updateSummary,
 } = require("../../lib/googleSheets");
 const { sheetNameFromDate } = require("../../lib/expenseValidator");
+const { isTraceEnabled, readTrace, writeTrace, startTraceStep, finishTraceStep } = require("../../lib/trace");
 
 const EXPENSE_HEADERS = [
   "Fingerprint", "Date", "Vendor", "Category",
@@ -16,6 +17,10 @@ const BREAKDOWN_HEADERS = ["Fingerprint", "Item", "Quantity", "Cost"];
 async function main() {
   let input = "";
   for await (const chunk of process.stdin) input += chunk;
+
+  const traceEnabled = isTraceEnabled();
+  const trace = traceEnabled ? (readTrace() || { steps: [] }) : null;
+  const traceStep = traceEnabled ? startTraceStep("store", { kind: "google-sheets" }) : null;
 
   const expense = JSON.parse(input);
 
@@ -56,6 +61,16 @@ async function main() {
 
   await deleteSheetIfExists(spreadsheetId, "Sheet1");
   await updateSummary(spreadsheetId);
+
+  if (traceEnabled) {
+    trace.steps.push(finishTraceStep(traceStep, {
+      status: "ok",
+      targetSheet: sheetName,
+      row: rowNumber,
+      breakdownRows: itemRows.length,
+    }));
+    writeTrace(trace);
+  }
 
   process.stdout.write(JSON.stringify({ success: true, row: rowNumber }));
 }

@@ -112,6 +112,8 @@ After a successful run, reply in this format:
 
 > Added expense: **{vendor}** — {total} {currency} on {date} ({category}). Row #{row} in your spreadsheet (tab {MM-YY}).
 
+If the user explicitly asks for tracing/debugging/cost tracing, append a compact per-step trace summary using the last recorded trace file. Otherwise keep the normal success reply short.
+
 ## Failure reply
 
 If a step still fails after retries, say which step failed and include the error message.
@@ -124,3 +126,4 @@ If a step still fails after retries, say which step failed and include the error
 - `auto` tries local Ollama first and falls back to OpenAI. Set to `ollama` to force local-only OCR.
 - Use `CLAWSHIER_OLLAMA_MODEL`, `CLAWSHIER_OLLAMA_HOST`, and `CLAWSHIER_OLLAMA_MAX_DIMENSION` to control the Ollama OCR backend.
 - When `CLAWSHIER_TEST_MODE=1` is present in the environment, the handlers use local test fixtures and a local mock sheet store. Use that for safe smoke tests before touching real APIs.
+- Optional tracing: set `CLAWSHIER_TRACE=1` to record per-step timing/usage metadata to `.clawshier-last-trace.json`. Show that trace in chat only when the user explicitly asks for tracing/debugging/cost tracing.

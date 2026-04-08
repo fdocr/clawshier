@@ -4,6 +4,7 @@ require("dotenv").config({ path: require("path").resolve(__dirname, "../../.env"
 const fs = require("fs");
 const path = require("path");
 const { runOcrWithProvider } = require("../../lib/visionOcr");
+const { isTraceEnabled, readTrace, writeTrace, startTraceStep, finishTraceStep } = require("../../lib/trace");
 
 const isTestMode = process.env.CLAWSHIER_TEST_MODE === "1";
 
@@ -28,13 +29,34 @@ function runMockOcr(imagePath) {
 
 async function main() {
   const imagePath = getImagePath();
+  const traceEnabled = isTraceEnabled();
+  const trace = traceEnabled ? (readTrace() || { steps: [] }) : null;
+  const traceStep = traceEnabled ? startTraceStep("ocr", { kind: "vision", imagePath }) : null;
 
   if (isTestMode) {
-    process.stdout.write(JSON.stringify({ ocr_text: runMockOcr(imagePath) }));
+    const output = { ocr_text: runMockOcr(imagePath) };
+    if (traceEnabled) {
+      trace.steps.push(finishTraceStep(traceStep, {
+        provider: "mock",
+        status: "ok",
+      }));
+      writeTrace(trace);
+    }
+    process.stdout.write(JSON.stringify(output));
     return;
   }
 
   const ocrText = await runOcrWithProvider({ imagePath });
+  if (traceEnabled) {
+    trace.steps.push(finishTraceStep(traceStep, {
+      provider: String(process.env.CLAWSHIER_VISION_PROVIDER || "openai").trim().toLowerCase(),
+      model: String(process.env.CLAWSHIER_VISION_PROVIDER || "openai").trim().toLowerCase() === "ollama"
+        ? String(process.env.CLAWSHIER_OLLAMA_MODEL || "llama3.2-vision:latest").trim()
+        : String(process.env.OPENAI_MODEL || "gpt-4o").trim(),
+      status: "ok",
+    }));
+    writeTrace(trace);
+  }
   process.stdout.write(JSON.stringify({ ocr_text: ocrText }));
 }
 

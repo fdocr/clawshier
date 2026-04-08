@@ -9,12 +9,17 @@ const {
   validate,
   sheetNameFromDate,
 } = require("../../lib/expenseValidator");
+const { isTraceEnabled, readTrace, writeTrace, startTraceStep, finishTraceStep } = require("../../lib/trace");
 
 const FINGERPRINT_COLUMN = "A";
 
 async function main() {
   let input = "";
   for await (const chunk of process.stdin) input += chunk;
+
+  const traceEnabled = isTraceEnabled();
+  const trace = traceEnabled ? (readTrace() || { steps: [] }) : null;
+  const traceStep = traceEnabled ? startTraceStep("validate", { kind: "local+sheets" }) : null;
 
   const overrideDate = parseOverrideDate(process.argv);
   const expense = normalize(JSON.parse(input), { overrideDate, today: new Date() });
@@ -33,6 +38,15 @@ async function main() {
         `Duplicate receipt detected (vendor: ${expense.vendor}, date: ${expense.date}, total: ${expense.total})`
       );
     }
+  }
+
+  if (traceEnabled) {
+    trace.steps.push(finishTraceStep(traceStep, {
+      status: "ok",
+      dedupeChecked: true,
+      targetSheet: sheetName,
+    }));
+    writeTrace(trace);
   }
 
   process.stdout.write(JSON.stringify(expense));

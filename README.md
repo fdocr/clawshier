@@ -67,6 +67,8 @@ Provider modes:
 
 For local Ollama OCR, Clawshier downsizes images on macOS with `sips` before sending them to the model. Use `CLAWSHIER_OLLAMA_MAX_DIMENSION` to tune that behavior.
 
+For debugging, you can ask OpenClaw to process a receipt in `verbose` mode to include the per-step trace in the reply. You can also enable handler-level tracing with `CLAWSHIER_TRACE=1`.
+
 ## Google Sheets setup
 
 1. Create a Google Cloud service account and download the JSON key file

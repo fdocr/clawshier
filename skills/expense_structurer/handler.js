@@ -4,6 +4,7 @@ require("dotenv").config({ path: require("path").resolve(__dirname, "../../.env"
 const fs = require("fs");
 const path = require("path");
 const OpenAI = require("openai");
+const { isTraceEnabled, readTrace, writeTrace, startTraceStep, finishTraceStep } = require("../../lib/trace");
 
 const isTestMode = process.env.CLAWSHIER_TEST_MODE === "1";
 const openai = isTestMode ? null : new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -35,8 +36,21 @@ async function main() {
   const { ocr_text } = JSON.parse(input);
   if (!ocr_text) throw new Error("Missing ocr_text in input");
 
+  const traceEnabled = isTraceEnabled();
+  const trace = traceEnabled ? (readTrace() || { steps: [] }) : null;
+  const traceStep = traceEnabled ? startTraceStep("structure", {
+    kind: "llm",
+    provider: "openai",
+    model,
+  }) : null;
+
   if (isTestMode) {
-    process.stdout.write(JSON.stringify(readMockStructured()));
+    const output = readMockStructured();
+    if (traceEnabled) {
+      trace.steps.push(finishTraceStep(traceStep, { provider: "mock", status: "ok" }));
+      writeTrace(trace);
+    }
+    process.stdout.write(JSON.stringify(output));
     return;
   }
 
@@ -57,6 +71,14 @@ async function main() {
     if (structured[field] === undefined || structured[field] === null) {
       throw new Error(`Missing required field: ${field}`);
     }
+  }
+
+  if (traceEnabled) {
+    trace.steps.push(finishTraceStep(traceStep, {
+      status: "ok",
+      usage: response.usage || null,
+    }));
+    writeTrace(trace);
   }
 
   process.stdout.write(JSON.stringify(structured));
